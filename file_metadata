@@ -1,0 +1,92 @@
+import os                           
+import time                         
+from binascii import hexlify        
+
+
+
+
+
+class FileProcessor:
+    ''' FileProcessor Class Definition '''
+    def __init__(self, path):
+        ''' Class Constructor '''
+        try:
+            self.filePath = path
+
+            if os.path.isfile(self.filePath) and os.access(self.filePath, os.R_OK):
+                stats = os.stat(self.filePath)
+
+                self.fileSize = stats.st_size
+                self.fileCreatedTime = time.ctime(stats.st_ctime)
+                self.fileModifiedTime = time.ctime(stats.st_mtime)
+                self.fileAccessTime = time.ctime(stats.st_atime)
+                self.fileMode = oct(stats.st_mode)  
+                self.fileUID = stats.st_uid
+                self.fileHeader = ''
+
+                self.status = "OK"
+            else:
+                self.status = "File not accessible"
+        except Exception as err:
+            self.status = f"Error: {err}"
+
+    def GetFileHeader(self):
+        ''' Extract the first 20 bytes of the file header '''
+        try:
+            with open(self.filePath, 'rb') as fileObj:
+                header = fileObj.read(20)
+                self.fileHeader = hexlify(header).decode('ascii')  
+                self.status = "OK"
+        except Exception as err:
+            self.status = f"Error: {err}"
+
+    def PrintFileDetails(self):
+        ''' Print the metadata and print the hex representation of the header'''
+        try:
+            print(f"File Path: {self.filePath}")
+            print(f"File Size: {self.fileSize} bytes")
+            print(f"Created Time: {self.fileCreatedTime}")
+            print(f"Modified Time: {self.fileModifiedTime}")
+            print(f"Access Time: {self.fileAccessTime}")
+            print(f"Mode: {self.fileMode}")
+            print(f"UID: {self.fileUID}")
+            if self.fileHeader:
+                print(f"Header (Hex): {self.fileHeader}")
+            else:
+                print("No Header")
+        except Exception as err:
+            print(f"Error: {err}")
+
+def process_files_in_directory(directory_path):
+    while True:
+        dirPath = input("Enter a Directory to Scan or Q to Quit: ").strip()
+        
+        if dirPath.upper() == 'Q':
+            print("Terminating")
+            break
+
+        if not os.path.isdir(dirPath):
+            print("Invalid Directory, try again")
+            continue
+        
+        fileList = os.listdir(dirPath)
+
+        for possibleFile in fileList:
+            fullPath = os.path.join(dirPath, possibleFile)
+            absPath = os.path.abspath(fullPath)
+            
+            fileObj = FileProcessor(absPath)
+            if fileObj.status == 'OK':
+                fileObj.GetFileHeader()
+                if fileObj.status == 'OK':
+                    fileObj.PrintFileDetails()
+                else:
+                    print(f"Error getting file header for {absPath}: {fileObj.status}")
+            else:
+                if os.path.isfile(absPath):
+                    print(f"\nAccess Denied: {absPath}")
+                else:
+                    print(f"\nEntry not a file: {absPath}")
+
+if __name__ == "__main__":
+    process_files_in_directory(".")
